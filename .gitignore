@@ -1,0 +1,7 @@
+chat-server
+*.o
+*.obj
+*.exe
+*.dll
+.DS_Store
+Thumbs.db

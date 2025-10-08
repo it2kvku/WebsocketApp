@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>cWebSocket Chat</title>
+  <style>
+    :root {
+      color-scheme: dark light;
+      --bg: #111827;
+      --fg: #f9fafb;
+      --accent: #3b82f6;
+      --muted: #6b7280;
+    }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      background: var(--bg);
+      color: var(--fg);
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      padding: 2rem;
+    }
+    main {
+      margin: auto;
+      width: min(640px, 100%);
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      background: rgba(31,41,55,0.8);
+      border-radius: 18px;
+      padding: 2rem;
+      box-shadow: 0 20px 60px rgba(15,23,42,0.35);
+      backdrop-filter: blur(16px);
+    }
+    h1 {
+      margin: 0;
+      font-size: clamp(1.6rem, 2vw + 1rem, 2.4rem);
+      text-align: center;
+      letter-spacing: 0.04em;
+    }
+    .status {
+      text-align: center;
+      font-size: 0.95rem;
+      color: var(--muted);
+    }
+    #messages {
+      border-radius: 12px;
+      border: 1px solid rgba(148,163,184,0.35);
+      padding: 1rem;
+      min-height: 320px;
+      background: rgba(15,23,42,0.55);
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      font-size: 0.95rem;
+      line-height: 1.5;
+    }
+    #messages p {
+      margin: 0;
+      padding: 0.5rem 0.75rem;
+      border-radius: 10px;
+      background: rgba(59,130,246,0.12);
+      color: var(--fg);
+      word-break: break-word;
+    }
+    form {
+      display: flex;
+      gap: 0.75rem;
+    }
+    input[type="text"] {
+      flex: 1;
+      padding: 0.8rem 1rem;
+      border: 1px solid rgba(148,163,184,0.35);
+      border-radius: 12px;
+      background: rgba(15,23,42,0.35);
+      color: var(--fg);
+      font-size: 1rem;
+    }
+    input[type="text"]:focus {
+      outline: none;
+      border-color: rgba(59,130,246,0.75);
+      box-shadow: 0 0 0 4px rgba(59,130,246,0.25);
+    }
+    button {
+      padding: 0.8rem 1.4rem;
+      border: none;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #3b82f6, #6366f1);
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 12px 30px rgba(99,102,241,0.35);
+    }
+    button:active {
+      transform: translateY(0px);
+      box-shadow: none;
+    }
+    .help {
+      font-size: 0.92rem;
+      color: var(--muted);
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>cWebSocket Chat</h1>
+    <p class="status" id="status">Đang kết nối...</p>
+    <section id="messages" aria-live="polite"></section>
+    <form id="chat-form">
+      <label class="screen-reader" for="message">Tin nhắn</label>
+      <input id="message" type="text" name="message" autocomplete="off" placeholder="Nhập tin nhắn hoặc thử /name <tên>" required />
+      <button type="submit">Gửi</button>
+    </form>
+    <p class="help">Mẹo: dùng lệnh <code>/name</code> để đổi tên hiển thị.</p>
+  </main>
+  <script>
+    const statusText = document.getElementById('status');
+    const messages = document.getElementById('messages');
+    const form = document.getElementById('chat-form');
+    const input = document.getElementById('message');
+
+    let ws;
+
+    function appendMessage(text) {
+      const p = document.createElement('p');
+      p.textContent = text;
+      messages.appendChild(p);
+      messages.scrollTop = messages.scrollHeight;
+    }
+
+    function connect() {
+      ws = new WebSocket('ws://localhost:9002', 'cws-chat');
+
+      ws.addEventListener('open', () => {
+        statusText.textContent = 'Đã kết nối. Chúc bạn trò chuyện vui vẻ!';
+      });
+
+      ws.addEventListener('message', (event) => {
+        appendMessage(event.data);
+      });
+
+      ws.addEventListener('close', () => {
+        statusText.textContent = 'Đã ngắt kết nối. Thử kết nối lại trong giây lát...';
+        setTimeout(connect, 2000);
+      });
+
+      ws.addEventListener('error', (err) => {
+        console.error('WebSocket error', err);
+        statusText.textContent = 'Gặp sự cố kết nối.';
+      });
+    }
+
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      if (!ws || ws.readyState !== WebSocket.OPEN) {
+        appendMessage('⚠️ Không thể gửi tin nhắn khi chưa kết nối.');
+        return;
+      }
+      const text = input.value.trim();
+      if (!text) return;
+      ws.send(text);
+      input.value = '';
+    });
+
+    connect();
+  </script>
+</body>
+</html>
